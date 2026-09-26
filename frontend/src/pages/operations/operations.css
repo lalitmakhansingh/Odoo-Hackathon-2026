@@ -1,0 +1,77 @@
+.page {
+  padding: 24px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  margin: 0;
+}
+
+.page-header p {
+  margin-top: 6px;
+  color: #6b7280;
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.filters input,
+.filters select {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+}
+
+.primary-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.secondary-btn {
+  padding: 7px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+
+th,
+td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+th {
+  background: #f8fafc;
+}
+
+.empty-state,
+.error-state {
+  padding: 30px;
+  text-align: center;
+}
