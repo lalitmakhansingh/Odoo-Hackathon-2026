@@ -1,9 +1,8 @@
 import api from "./api";
 
-/*
- * Product APIs
- * Backend owner: Member 1
- */
+/* =========================
+   PRODUCTS
+========================= */
 
 export const productService = {
   getAll: () =>
@@ -23,10 +22,9 @@ export const productService = {
 };
 
 
-/*
- * Stock APIs
- * Backend owner: Member 2
- */
+/* =========================
+   STOCK
+========================= */
 
 export const stockService = {
   getAll: () =>
@@ -40,9 +38,9 @@ export const stockService = {
 };
 
 
-/*
- * Receipt APIs
- */
+/* =========================
+   RECEIPTS
+========================= */
 
 export const receiptService = {
   getAll: () =>
@@ -59,9 +57,9 @@ export const receiptService = {
 };
 
 
-/*
- * Delivery APIs
- */
+/* =========================
+   DELIVERIES
+========================= */
 
 export const deliveryService = {
   getAll: () =>
@@ -78,9 +76,9 @@ export const deliveryService = {
 };
 
 
-/*
- * Internal Transfer APIs
- */
+/* =========================
+   INTERNAL TRANSFERS
+========================= */
 
 export const transferService = {
   getAll: () =>
@@ -94,9 +92,9 @@ export const transferService = {
 };
 
 
-/*
- * Inventory Adjustment APIs
- */
+/* =========================
+   INVENTORY ADJUSTMENTS
+========================= */
 
 export const adjustmentService = {
   getAll: () =>
@@ -110,20 +108,11 @@ export const adjustmentService = {
 };
 
 
-/*
- * Move History
- *
- * The backend plan defines the stock_moves database table,
- * but an exact GET endpoint was not specified.
- *
- * We therefore keep the endpoint configurable.
- */
-
-const MOVE_HISTORY_ENDPOINT =
-  import.meta.env.VITE_MOVE_HISTORY_ENDPOINT ||
-  "/stock-moves";
+/* =========================
+   MOVE HISTORY
+========================= */
 
 export const moveHistoryService = {
   getAll: () =>
-    api.get(MOVE_HISTORY_ENDPOINT),
+    api.get("/stock-moves"),
 };
