@@ -1,10 +1,26 @@
 import api from "./api";
 
+import {
+  mockProductService,
+  mockCategoryService,
+  mockUomService,
+  mockStockService,
+  mockReorderRuleService,
+  mockReceiptService,
+  mockDeliveryService,
+  mockTransferService,
+  mockAdjustmentService,
+  mockMoveHistoryService,
+} from "./mockOperationsService";
+
+const USE_MOCK =
+  import.meta.env.VITE_USE_MOCK_API === "true";
+
 /* =========================
    PRODUCTS
 ========================= */
 
-export const productService = {
+const realProductService = {
   getAll: () =>
     api.get("/products"),
 
@@ -21,12 +37,16 @@ export const productService = {
     api.delete(`/products/${id}`),
 };
 
+export const productService =
+  USE_MOCK
+    ? mockProductService
+    : realProductService;
 
 /* =========================
    CATEGORIES
 ========================= */
 
-export const categoryService = {
+const realCategoryService = {
   getAll: () =>
     api.get("/categories"),
 
@@ -34,12 +54,16 @@ export const categoryService = {
     api.post("/categories", data),
 };
 
+export const categoryService =
+  USE_MOCK
+    ? mockCategoryService
+    : realCategoryService;
 
 /* =========================
-   UNITS OF MEASURE
+   UOM
 ========================= */
 
-export const uomService = {
+const realUomService = {
   getAll: () =>
     api.get("/uom"),
 
@@ -47,25 +71,16 @@ export const uomService = {
     api.post("/uom", data),
 };
 
-
-/* =========================
-   REORDER RULES
-========================= */
-
-export const reorderRuleService = {
-  getAll: () =>
-    api.get("/reorder-rules"),
-
-  create: (data) =>
-    api.post("/reorder-rules", data),
-};
-
+export const uomService =
+  USE_MOCK
+    ? mockUomService
+    : realUomService;
 
 /* =========================
    STOCK
 ========================= */
 
-export const stockService = {
+const realStockService = {
   getAll: (params = {}) =>
     api.get("/stock", { params }),
 
@@ -80,12 +95,33 @@ export const stockService = {
     }),
 };
 
+export const stockService =
+  USE_MOCK
+    ? mockStockService
+    : realStockService;
+
+/* =========================
+   REORDER RULES
+========================= */
+
+const realReorderRuleService = {
+  getAll: () =>
+    api.get("/reorder-rules"),
+
+  create: (data) =>
+    api.post("/reorder-rules", data),
+};
+
+export const reorderRuleService =
+  USE_MOCK
+    ? mockReorderRuleService
+    : realReorderRuleService;
 
 /* =========================
    RECEIPTS
 ========================= */
 
-export const receiptService = {
+const realReceiptService = {
   getAll: () =>
     api.get("/receipts"),
 
@@ -99,12 +135,16 @@ export const receiptService = {
     api.post(`/receipts/${id}/validate`),
 };
 
+export const receiptService =
+  USE_MOCK
+    ? mockReceiptService
+    : realReceiptService;
 
 /* =========================
    DELIVERIES
 ========================= */
 
-export const deliveryService = {
+const realDeliveryService = {
   getAll: () =>
     api.get("/deliveries"),
 
@@ -118,12 +158,16 @@ export const deliveryService = {
     api.post(`/deliveries/${id}/validate`),
 };
 
+export const deliveryService =
+  USE_MOCK
+    ? mockDeliveryService
+    : realDeliveryService;
 
 /* =========================
    TRANSFERS
 ========================= */
 
-export const transferService = {
+const realTransferService = {
   getAll: () =>
     api.get("/transfers"),
 
@@ -134,12 +178,16 @@ export const transferService = {
     api.post(`/transfers/${id}/validate`),
 };
 
+export const transferService =
+  USE_MOCK
+    ? mockTransferService
+    : realTransferService;
 
 /* =========================
    ADJUSTMENTS
 ========================= */
 
-export const adjustmentService = {
+const realAdjustmentService = {
   getAll: () =>
     api.get("/adjustments"),
 
@@ -150,12 +198,23 @@ export const adjustmentService = {
     api.post(`/adjustments/${id}/validate`),
 };
 
+export const adjustmentService =
+  USE_MOCK
+    ? mockAdjustmentService
+    : realAdjustmentService;
 
 /* =========================
    MOVE HISTORY
 ========================= */
 
-export const moveHistoryService = {
+const realMoveHistoryService = {
   getAll: (params = {}) =>
-    api.get("/stock-moves", { params }),
+    api.get("/stock-moves", {
+      params,
+    }),
 };
+
+export const moveHistoryService =
+  USE_MOCK
+    ? mockMoveHistoryService
+    : realMoveHistoryService;

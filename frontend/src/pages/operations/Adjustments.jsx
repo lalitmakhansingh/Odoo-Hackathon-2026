@@ -4,6 +4,8 @@ import {
   adjustmentService,
 } from "../../services/operationsService";
 
+import "./operations.css";
+
 function Adjustments() {
   const [adjustments, setAdjustments] =
     useState([]);
@@ -11,9 +13,23 @@ function Adjustments() {
   const [loading, setLoading] =
     useState(true);
 
-  useEffect(() => {
-    loadAdjustments();
-  }, []);
+  const [formOpen, setFormOpen] =
+    useState(false);
+
+  const [product, setProduct] =
+    useState("");
+
+  const [location, setLocation] =
+    useState("Main Warehouse / Rack A");
+
+  const [recordedQuantity, setRecordedQuantity] =
+    useState("");
+
+  const [physicalQuantity, setPhysicalQuantity] =
+    useState("");
+
+  const [reason, setReason] =
+    useState("");
 
   async function loadAdjustments() {
     try {
@@ -22,164 +38,320 @@ function Adjustments() {
       const response =
         await adjustmentService.getAll();
 
-      const data =
-        response?.data ?? response;
-
       setAdjustments(
-        Array.isArray(data)
-          ? data
-          : data?.content ?? []
+        response?.data?.data || []
       );
-
-    } catch (err) {
-      console.error(err);
     } finally {
       setLoading(false);
     }
   }
 
-  async function validateAdjustment(id) {
-    try {
-      await adjustmentService.validate(id);
+  useEffect(() => {
+    loadAdjustments();
+  }, []);
 
-      await loadAdjustments();
+  const difference =
+    Number(physicalQuantity || 0) -
+    Number(recordedQuantity || 0);
 
-    } catch (err) {
-      console.error(err);
+  async function createAdjustment(event) {
+    event.preventDefault();
 
+    if (
+      !product.trim() ||
+      Number(recordedQuantity) < 0 ||
+      Number(physicalQuantity) < 0 ||
+      !reason.trim()
+    ) {
       alert(
-        "Adjustment validation failed."
+        "Please enter valid adjustment details."
       );
+      return;
     }
+
+    await adjustmentService.create({
+      productName: product,
+      location,
+      recordedQuantity:
+        Number(recordedQuantity),
+      physicalQuantity:
+        Number(physicalQuantity),
+      difference,
+      reason,
+    });
+
+    setProduct("");
+    setRecordedQuantity("");
+    setPhysicalQuantity("");
+    setReason("");
+    setFormOpen(false);
+
+    await loadAdjustments();
   }
 
-  if (loading) {
-    return (
-      <section className="page">
-        <h1>Inventory Adjustments</h1>
-        <p>Loading adjustments...</p>
-      </section>
-    );
+  async function validateAdjustment(id) {
+    await adjustmentService.validate(id);
+    await loadAdjustments();
   }
 
   return (
-    <section className="page">
+    <section className="operations-page">
 
-      <div className="page-header">
+      <div className="operation-header">
 
         <div>
           <h1>Inventory Adjustments</h1>
 
           <p>
-            Reconcile recorded and physical stock.
+            Reconcile recorded stock with physical stock.
           </p>
         </div>
 
-        <button className="primary-btn">
+        <button
+          className="primary-btn"
+          onClick={() => setFormOpen(true)}
+        >
           + New Adjustment
         </button>
 
       </div>
 
-      <div className="table-container">
+      {loading ? (
+        <div className="state-box">
+          Loading adjustments...
+        </div>
+      ) : (
+        <div className="operation-table-wrapper">
 
-        <table>
+          <table className="operation-table">
 
-          <thead>
-            <tr>
-              <th>Reference</th>
-              <th>Product</th>
-              <th>Location</th>
-              <th>Recorded</th>
-              <th>Physical</th>
-              <th>Difference</th>
-              <th>Reason</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
+            <thead>
+              <tr>
+                <th>Adjustment</th>
+                <th>Product</th>
+                <th>Location</th>
+                <th>Recorded</th>
+                <th>Physical</th>
+                <th>Difference</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
 
-          <tbody>
+            <tbody>
 
-            {adjustments.map(
-              (adjustment) => (
+              {adjustments.map(
+                (adjustment) => (
 
-                <tr key={adjustment.id}>
+                  <tr key={adjustment.id}>
 
-                  <td>
-                    {adjustment.reference ||
-                      adjustment.code ||
-                      adjustment.id}
-                  </td>
+                    <td>
+                      {adjustment.id}
+                    </td>
 
-                  <td>
-                    {adjustment.product?.name ||
-                      "-"}
-                  </td>
+                    <td>
+                      {adjustment.productName}
+                    </td>
 
-                  <td>
-                    {adjustment.location?.name ||
-                      adjustment.locationName ||
-                      "-"}
-                  </td>
+                    <td>
+                      {adjustment.location}
+                    </td>
 
-                  <td>
-                    {adjustment.recordedQuantity ??
-                      0}
-                  </td>
+                    <td>
+                      {adjustment.recordedQuantity}
+                    </td>
 
-                  <td>
-                    {adjustment.physicalQuantity ??
-                      0}
-                  </td>
+                    <td>
+                      {adjustment.physicalQuantity}
+                    </td>
 
-                  <td>
-                    {adjustment.difference ??
-                      ((adjustment.physicalQuantity ??
-                        0) -
-                        (adjustment.recordedQuantity ??
-                          0))}
-                  </td>
+                    <td
+                      className={
+                        adjustment.difference < 0
+                          ? "negative-value"
+                          : adjustment.difference > 0
+                          ? "positive-value"
+                          : ""
+                      }
+                    >
+                      {adjustment.difference}
+                    </td>
 
-                  <td>
-                    {adjustment.reason ||
-                      "-"}
-                  </td>
+                    <td>
+                      {adjustment.reason}
+                    </td>
 
-                  <td>
-                    {adjustment.status}
-                  </td>
-
-                  <td>
-
-                    {adjustment.status !==
-                      "DONE" && (
-
-                      <button
-                        className="secondary-btn"
-                        onClick={() =>
-                          validateAdjustment(
-                            adjustment.id
-                          )
-                        }
+                    <td>
+                      <span
+                        className={`status-badge ${adjustment.status.toLowerCase()}`}
                       >
-                        Validate
-                      </button>
+                        {adjustment.status}
+                      </span>
+                    </td>
 
-                    )}
+                    <td>
+                      {adjustment.status !==
+                        "DONE" && (
+                        <button
+                          className="secondary-btn"
+                          onClick={() =>
+                            validateAdjustment(
+                              adjustment.id
+                            )
+                          }
+                        >
+                          Validate
+                        </button>
+                      )}
+                    </td>
 
-                  </td>
+                  </tr>
 
-                </tr>
+                )
+              )}
 
-              )
-            )}
+            </tbody>
 
-          </tbody>
+          </table>
 
-        </table>
+        </div>
+      )}
 
-      </div>
+      {formOpen && (
+        <div className="modal-backdrop">
+
+          <div className="operation-modal">
+
+            <div className="modal-header">
+              <h2>New Adjustment</h2>
+
+              <button
+                className="modal-close"
+                onClick={() =>
+                  setFormOpen(false)
+                }
+              >
+                ×
+              </button>
+            </div>
+
+            <form
+              className="operation-form"
+              onSubmit={createAdjustment}
+            >
+
+              <label>
+                Product
+                <input
+                  value={product}
+                  onChange={(e) =>
+                    setProduct(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Product name"
+                />
+              </label>
+
+              <label>
+                Location
+                <select
+                  value={location}
+                  onChange={(e) =>
+                    setLocation(
+                      e.target.value
+                    )
+                  }
+                >
+                  <option>
+                    Main Warehouse / Rack A
+                  </option>
+                  <option>
+                    Main Warehouse / Rack B
+                  </option>
+                  <option>
+                    Production Rack
+                  </option>
+                </select>
+              </label>
+
+              <label>
+                Recorded Quantity
+                <input
+                  type="number"
+                  min="0"
+                  value={recordedQuantity}
+                  onChange={(e) =>
+                    setRecordedQuantity(
+                      e.target.value
+                    )
+                  }
+                />
+              </label>
+
+              <label>
+                Physical Quantity
+                <input
+                  type="number"
+                  min="0"
+                  value={physicalQuantity}
+                  onChange={(e) =>
+                    setPhysicalQuantity(
+                      e.target.value
+                    )
+                  }
+                />
+              </label>
+
+              <div className="difference-preview">
+                Difference:
+                <strong>
+                  {difference}
+                </strong>
+              </div>
+
+              <label>
+                Reason
+                <textarea
+                  rows="3"
+                  value={reason}
+                  onChange={(e) =>
+                    setReason(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Reason for adjustment"
+                />
+              </label>
+
+              <div className="modal-actions">
+
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={() =>
+                    setFormOpen(false)
+                  }
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="primary-btn"
+                >
+                  Save Adjustment
+                </button>
+
+              </div>
+
+            </form>
+
+          </div>
+
+        </div>
+      )}
 
     </section>
   );
