@@ -1,15 +1,22 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from "react-router-dom";
 
 function Sidebar() {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    navigate("/login");
+  };
+
   return (
     <aside className="sidebar">
-
       <div className="sidebar-title">
         StockSense
       </div>
 
       <nav>
-
         <NavLink to="/dashboard">
           📊 Dashboard
         </NavLink>
@@ -54,13 +61,15 @@ function Sidebar() {
           👤 Profile
         </NavLink>
 
-        <NavLink to="/login">
+        <button
+          className="sidebar-logout"
+          onClick={handleLogout}
+        >
           🚪 Logout
-        </NavLink>
-
+        </button>
       </nav>
     </aside>
-  )
+  );
 }
 
-export default Sidebar
+export default Sidebar;
