@@ -1,12 +1,12 @@
-import MainLayout from './layouts/MainLayout'
+import MainLayout from "./layouts/MainLayout";
+import AppRoutes from "./routes/AppRoutes";
 
 function App() {
   return (
     <MainLayout>
-      <h1>StockSense Dashboard</h1>
-      <p>Welcome to StockSense</p>
+      <AppRoutes />
     </MainLayout>
-  )
+  );
 }
 
-export default App
+export default App;
