@@ -1,4 +1,18 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 function Dashboard() {
+  const navigate = useNavigate();
+
+  const [filters, setFilters] = useState({
+    documentType: "",
+    status: "",
+    warehouse: "",
+    category: "",
+  });
+
+  const [refreshing, setRefreshing] = useState(false);
+
   const stats = [
     {
       title: "Total Products",
@@ -84,16 +98,51 @@ function Dashboard() {
     },
   ];
 
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+
+    setFilters({
+      ...filters,
+      [name]: value,
+    });
+  };
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 700);
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      documentType: "",
+      status: "",
+      warehouse: "",
+      category: "",
+    });
+  };
+
+  const handleQuickAction = (path) => {
+    navigate(path);
+  };
+
   return (
     <div className="dashboard">
+      {/* Dashboard Header */}
       <div className="dashboard-header">
         <div>
           <h1>Dashboard</h1>
           <p>Overview of your inventory operations</p>
         </div>
 
-        <button className="refresh-button">
-          🔄 Refresh
+        <button
+          className="refresh-button"
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          {refreshing ? "⟳ Refreshing..." : "🔄 Refresh"}
         </button>
       </div>
 
@@ -115,48 +164,97 @@ function Dashboard() {
 
       {/* Filters */}
       <div className="dashboard-card filters-card">
-        <h2>Filters</h2>
+        <div className="card-header">
+          <div>
+            <h2>Filters</h2>
+            <p>Filter inventory operations</p>
+          </div>
+
+          <button
+            className="clear-filter-button"
+            onClick={clearFilters}
+          >
+            Clear Filters
+          </button>
+        </div>
 
         <div className="filters-grid">
-          <select>
+          <select
+            name="documentType"
+            value={filters.documentType}
+            onChange={handleFilterChange}
+          >
             <option value="">Document Type</option>
-            <option>Receipt</option>
-            <option>Delivery</option>
-            <option>Transfer</option>
-            <option>Adjustment</option>
+            <option value="Receipt">Receipt</option>
+            <option value="Delivery">Delivery</option>
+            <option value="Transfer">Transfer</option>
+            <option value="Adjustment">Adjustment</option>
           </select>
 
-          <select>
+          <select
+            name="status"
+            value={filters.status}
+            onChange={handleFilterChange}
+          >
             <option value="">Status</option>
-            <option>Draft</option>
-            <option>Waiting</option>
-            <option>Ready</option>
-            <option>Done</option>
-            <option>Canceled</option>
+            <option value="Draft">Draft</option>
+            <option value="Waiting">Waiting</option>
+            <option value="Ready">Ready</option>
+            <option value="Done">Done</option>
+            <option value="Canceled">Canceled</option>
           </select>
 
-          <select>
+          <select
+            name="warehouse"
+            value={filters.warehouse}
+            onChange={handleFilterChange}
+          >
             <option value="">Warehouse</option>
-            <option>Main Warehouse</option>
-            <option>Secondary Warehouse</option>
+            <option value="Main Warehouse">
+              Main Warehouse
+            </option>
+            <option value="Secondary Warehouse">
+              Secondary Warehouse
+            </option>
           </select>
 
-          <select>
+          <select
+            name="category"
+            value={filters.category}
+            onChange={handleFilterChange}
+          >
             <option value="">Category</option>
-            <option>Raw Material</option>
-            <option>Electronics</option>
-            <option>Finished Goods</option>
+            <option value="Raw Material">
+              Raw Material
+            </option>
+            <option value="Electronics">
+              Electronics
+            </option>
+            <option value="Finished Goods">
+              Finished Goods
+            </option>
           </select>
         </div>
       </div>
 
+      {/* Dashboard Columns */}
       <div className="dashboard-columns">
-
         {/* Recent Operations */}
         <div className="dashboard-card">
           <div className="card-header">
-            <h2>Recent Operations</h2>
-            <span>View All</span>
+            <div>
+              <h2>Recent Operations</h2>
+              <p>Latest inventory activities</p>
+            </div>
+
+            <button
+              className="view-all-button"
+              onClick={() =>
+                navigate("/operations/receipts")
+              }
+            >
+              View All
+            </button>
           </div>
 
           <div className="table-container">
@@ -175,9 +273,17 @@ function Dashboard() {
                 {recentOperations.map((operation) => (
                   <tr key={operation.reference}>
                     <td>{operation.type}</td>
-                    <td>{operation.reference}</td>
+
+                    <td>
+                      <strong>
+                        {operation.reference}
+                      </strong>
+                    </td>
+
                     <td>{operation.product}</td>
+
                     <td>{operation.quantity}</td>
+
                     <td>
                       <span
                         className={`status-badge status-${operation.status.toLowerCase()}`}
@@ -195,13 +301,25 @@ function Dashboard() {
         {/* Stock Alerts */}
         <div className="dashboard-card">
           <div className="card-header">
-            <h2>Stock Alerts</h2>
-            <span>View All</span>
+            <div>
+              <h2>Stock Alerts</h2>
+              <p>Products requiring attention</p>
+            </div>
+
+            <button
+              className="view-all-button"
+              onClick={() => navigate("/products")}
+            >
+              View All
+            </button>
           </div>
 
           <div className="alerts-list">
             {stockAlerts.map((alert) => (
-              <div className="stock-alert" key={alert.sku}>
+              <div
+                className="stock-alert"
+                key={alert.sku}
+              >
                 <div>
                   <strong>{alert.product}</strong>
                   <small>{alert.sku}</small>
@@ -209,24 +327,65 @@ function Dashboard() {
 
                 <div className="stock-alert-right">
                   <strong>{alert.stock}</strong>
-                  <small>Reorder: {alert.reorder}</small>
+                  <small>
+                    Reorder: {alert.reorder}
+                  </small>
                 </div>
               </div>
             ))}
           </div>
         </div>
-
       </div>
 
       {/* Quick Actions */}
       <div className="dashboard-card">
-        <h2>Quick Actions</h2>
+        <div className="card-header">
+          <div>
+            <h2>Quick Actions</h2>
+            <p>Create a new inventory operation</p>
+          </div>
+        </div>
 
         <div className="quick-actions">
-          <button>📥 New Receipt</button>
-          <button>📤 New Delivery</button>
-          <button>🔄 New Transfer</button>
-          <button>📝 Stock Adjustment</button>
+          <button
+            onClick={() =>
+              handleQuickAction(
+                "/operations/receipts"
+              )
+            }
+          >
+            📥 New Receipt
+          </button>
+
+          <button
+            onClick={() =>
+              handleQuickAction(
+                "/operations/deliveries"
+              )
+            }
+          >
+            📤 New Delivery
+          </button>
+
+          <button
+            onClick={() =>
+              handleQuickAction(
+                "/operations/transfers"
+              )
+            }
+          >
+            🔄 New Transfer
+          </button>
+
+          <button
+            onClick={() =>
+              handleQuickAction(
+                "/operations/adjustments"
+              )
+            }
+          >
+            📝 Stock Adjustment
+          </button>
         </div>
       </div>
     </div>
