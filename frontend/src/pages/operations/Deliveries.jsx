@@ -56,8 +56,55 @@ function Deliveries() {
   }
 
   useEffect(() => {
-    loadData();
-  }, []);
+  let active = true;
+
+  async function initialize() {
+    try {
+      setLoading(true);
+
+      const [
+        deliveriesResponse,
+        productsResponse,
+        stockResponse,
+      ] = await Promise.all([
+        deliveryService.getAll(),
+        productService.getAll(),
+        stockService.getAll(),
+      ]);
+
+      if (!active) return;
+
+      setDeliveries(
+        deliveriesResponse?.data?.data || []
+      );
+
+      setProducts(
+        productsResponse?.data?.data || []
+      );
+
+      setStock(
+        stockResponse?.data?.data || []
+      );
+    } catch (error) {
+      if (!active) return;
+
+      console.error(
+        "Failed to load deliveries:",
+        error
+      );
+    } finally {
+      if (active) {
+        setLoading(false);
+      }
+    }
+  }
+
+  initialize();
+
+  return () => {
+    active = false;
+  };
+}, []);
 
   const locations = useMemo(() => {
     return [
