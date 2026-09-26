@@ -78,4 +78,19 @@ public class StockService {
 
         return stockRepository.save(stock);
     }
+
+    @Transactional(readOnly = true)
+public java.util.List<Stock> getAllStock() {
+    return stockRepository.findAll();
+}
+
+@Transactional(readOnly = true)
+public java.util.List<Stock> getStockByProduct(UUID productId) {
+    return stockRepository.findByProductId(productId);
+}
+
+@Transactional(readOnly = true)
+public java.util.List<Stock> getStockByLocation(UUID locationId) {
+    return stockRepository.findByLocationId(locationId);
+}
 }
