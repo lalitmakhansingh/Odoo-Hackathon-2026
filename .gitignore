@@ -1,1 +1,6 @@
 frontend/.env
+# Maven
+backend/target/
+
+# IDE
+.vscode/

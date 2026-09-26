@@ -1,12 +1,14 @@
 package com.stocksense_backend.ledger.service;
 
 import com.stocksense_backend.inventory.entity.Product;
+import com.stocksense_backend.ledger.dto.StockMoveResponse;
 import com.stocksense_backend.ledger.entity.StockMove;
 import com.stocksense_backend.ledger.repository.StockMoveRepository;
 import com.stocksense_backend.warehouse.entity.Location;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -42,5 +44,20 @@ public class LedgerService {
         move.setCreatedBy(createdBy);
 
         return stockMoveRepository.save(move);
+    }
+
+    public List<StockMoveResponse> getAllStockMoves() {
+        return stockMoveRepository.findAll()
+                .stream()
+                .map(move -> new StockMoveResponse(
+                        move.getId(),
+                        move.getProduct().getId(),
+                        move.getLocation().getId(),
+                        move.getQuantity(),
+                        move.getMovementType(),
+                        move.getReferenceId(),
+                        move.getCreatedAt()
+                ))
+                .toList();
     }
 }
