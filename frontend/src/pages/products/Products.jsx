@@ -2,161 +2,375 @@ import { useEffect, useMemo, useState } from "react";
 
 import {
   productService,
+  categoryService,
+  uomService,
 } from "../../services/operationsService";
+
+import "./products.css";
+
+const EMPTY_FORM = {
+  name: "",
+  sku: "",
+  categoryId: "",
+  unitOfMeasureId: "",
+  description: "",
+};
 
 function Products() {
   const [products, setProducts] = useState([]);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [categories, setCategories] = useState([]);
+  const [uoms, setUoms] = useState([]);
 
-  const [error, setError] =
-    useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const [search, setSearch] =
-    useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const [category, setCategory] =
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] =
     useState("ALL");
 
-  const [location, setLocation] =
-    useState("ALL");
+  const [isModalOpen, setIsModalOpen] =
+    useState(false);
+
+  const [editingProduct, setEditingProduct] =
+    useState(null);
+
+  const [form, setForm] =
+    useState(EMPTY_FORM);
 
   useEffect(() => {
-    loadProducts();
+    loadInitialData();
   }, []);
 
-  async function loadProducts() {
+  async function loadInitialData() {
     try {
       setLoading(true);
       setError("");
 
-      const response =
-        await productService.getAll();
-
-      /*
-       * Supports either:
-       * response.data
-       * or directly returned arrays
-       */
-      const data =
-        response?.data ?? response;
+      const [
+        productsResponse,
+        categoriesResponse,
+        uomResponse,
+      ] = await Promise.all([
+        productService.getAll(),
+        categoryService.getAll(),
+        uomService.getAll(),
+      ]);
 
       setProducts(
-        Array.isArray(data)
-          ? data
-          : data?.content ?? []
+        extractList(productsResponse)
+      );
+
+      setCategories(
+        extractList(categoriesResponse)
+      );
+
+      setUoms(
+        extractList(uomResponse)
       );
     } catch (err) {
       console.error(err);
 
       setError(
-        "Unable to load products."
+        "Unable to load product information."
       );
     } finally {
       setLoading(false);
     }
   }
 
-  const categories = useMemo(() => {
-    const values = products
-      .map((product) => product.category)
-      .filter(Boolean);
+  /*
+   * Narender's common response format:
+   *
+   * {
+   *   success: true,
+   *   message: "...",
+   *   data: ...
+   * }
+   *
+   * This helper handles:
+   * response.data
+   * response.data.data
+   * response.data.content
+   */
 
-    return [
-      "ALL",
-      ...new Set(values),
-    ];
-  }, [products]);
+  function extractList(response) {
+    const body = response?.data;
 
-  const locations = useMemo(() => {
-    const values = products
-      .map((product) =>
-        product.location ||
-        product.locationName
-      )
-      .filter(Boolean);
+    if (Array.isArray(body)) {
+      return body;
+    }
 
-    return [
-      "ALL",
-      ...new Set(values),
-    ];
-  }, [products]);
+    if (Array.isArray(body?.data)) {
+      return body.data;
+    }
 
-  const filteredProducts =
-    products.filter((product) => {
+    if (Array.isArray(body?.content)) {
+      return body.content;
+    }
 
+    return [];
+  }
+
+  function extractObject(response) {
+    const body = response?.data;
+
+    if (body?.data) {
+      return body.data;
+    }
+
+    return body;
+  }
+
+  const filteredProducts = useMemo(() => {
+    const query = search
+      .trim()
+      .toLowerCase();
+
+    return products.filter((product) => {
       const name =
-        product.name ?? "";
+        String(product.name ?? "");
 
       const sku =
-        product.sku ??
-        product.code ??
-        "";
+        String(product.sku ?? "");
 
-      const productCategory =
-        product.category ?? "";
-
-      const productLocation =
-        product.location ||
-        product.locationName ||
-        "";
-
-      const text =
-        search.toLowerCase();
+      const category =
+        product.category?.name ?? "";
 
       const matchesSearch =
-        name
-          .toLowerCase()
-          .includes(text) ||
-        sku
-          .toLowerCase()
-          .includes(text);
+        name.toLowerCase().includes(query) ||
+        sku.toLowerCase().includes(query);
 
       const matchesCategory =
-        category === "ALL" ||
-        productCategory === category;
-
-      const matchesLocation =
-        location === "ALL" ||
-        productLocation === location;
+        categoryFilter === "ALL" ||
+        String(product.category?.id) ===
+          String(categoryFilter);
 
       return (
         matchesSearch &&
-        matchesCategory &&
-        matchesLocation
+        matchesCategory
       );
     });
+  }, [
+    products,
+    search,
+    categoryFilter,
+  ]);
 
-  if (loading) {
-    return (
-      <section className="page">
-        <h1>Products</h1>
-        <p>Loading products...</p>
-      </section>
+  function openCreateModal() {
+    setEditingProduct(null);
+    setForm(EMPTY_FORM);
+    setError("");
+    setSuccess("");
+    setIsModalOpen(true);
+  }
+
+  function openEditModal(product) {
+    setEditingProduct(product);
+
+    setForm({
+      name: product.name ?? "",
+      sku: product.sku ?? "",
+      categoryId:
+        product.category?.id ?? "",
+      unitOfMeasureId:
+        product.unitOfMeasure?.id ?? "",
+      description:
+        product.description ?? "",
+    });
+
+    setError("");
+    setSuccess("");
+    setIsModalOpen(true);
+  }
+
+  function closeModal() {
+    if (saving) return;
+
+    setIsModalOpen(false);
+    setEditingProduct(null);
+    setForm(EMPTY_FORM);
+  }
+
+  function handleChange(event) {
+    const { name, value } =
+      event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  }
+
+  function validateForm() {
+    if (!form.name.trim()) {
+      return "Product name is required.";
+    }
+
+    if (!form.sku.trim()) {
+      return "SKU is required.";
+    }
+
+    if (!form.categoryId) {
+      return "Please select a category.";
+    }
+
+    if (!form.unitOfMeasureId) {
+      return "Please select a unit of measure.";
+    }
+
+    return null;
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+
+    const validationError =
+      validateForm();
+
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    try {
+      setSaving(true);
+      setError("");
+      setSuccess("");
+
+      /*
+       * EXACT backend request structure
+       * provided by Narender.
+       */
+
+      const payload = {
+        name: form.name.trim(),
+
+        sku: form.sku.trim(),
+
+        category: {
+          id: Number(form.categoryId),
+        },
+
+        unitOfMeasure: {
+          id: Number(
+            form.unitOfMeasureId
+          ),
+        },
+
+        description:
+          form.description.trim(),
+      };
+
+      if (editingProduct) {
+        await productService.update(
+          editingProduct.id,
+          payload
+        );
+
+        setSuccess(
+          "Product updated successfully."
+        );
+      } else {
+        await productService.create(
+          payload
+        );
+
+        setSuccess(
+          "Product created successfully."
+        );
+      }
+
+      await loadProductsOnly();
+
+      closeModal();
+
+    } catch (err) {
+      console.error(
+        "Product save error:",
+        err
+      );
+
+      const message =
+        err?.response?.data?.message;
+
+      setError(
+        message ||
+          "Unable to save product."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function loadProductsOnly() {
+    const response =
+      await productService.getAll();
+
+    setProducts(
+      extractList(response)
     );
   }
 
-  if (error) {
+  async function handleDelete(product) {
+    const confirmed =
+      window.confirm(
+        `Delete "${product.name}"? This action cannot be undone.`
+      );
+
+    if (!confirmed) return;
+
+    try {
+      setError("");
+      setSuccess("");
+
+      await productService.remove(
+        product.id
+      );
+
+      setProducts((previous) =>
+        previous.filter(
+          (item) =>
+            item.id !== product.id
+        )
+      );
+
+      setSuccess(
+        "Product deleted successfully."
+      );
+    } catch (err) {
+      console.error(
+        "Delete product error:",
+        err
+      );
+
+      const message =
+        err?.response?.data?.message;
+
+      setError(
+        message ||
+          "Unable to delete product."
+      );
+    }
+  }
+
+  if (loading) {
     return (
-      <section className="page">
-        <h1>Products</h1>
-
-        <div className="error-state">
-          {error}
-
-          <button
-            onClick={loadProducts}
-          >
-            Retry
-          </button>
+      <section className="products-page">
+        <div className="products-state">
+          Loading products...
         </div>
       </section>
     );
   }
 
   return (
-    <section className="page">
+    <section className="products-page">
+
+      {/* ================= HEADER ================= */}
 
       <div className="page-header">
 
@@ -164,24 +378,42 @@ function Products() {
           <h1>Products</h1>
 
           <p>
-            Manage products, stock and
-            reorder information.
+            Manage products, categories and units
+            of measure.
           </p>
         </div>
 
         <button
+          type="button"
           className="primary-btn"
+          onClick={openCreateModal}
         >
           + Create Product
         </button>
 
       </div>
 
-      <div className="filters">
+      {/* ================= MESSAGES ================= */}
+
+      {error && (
+        <div className="products-error">
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="products-success">
+          {success}
+        </div>
+      )}
+
+      {/* ================= FILTERS ================= */}
+
+      <div className="product-filters">
 
         <input
           type="text"
-          placeholder="Search product or SKU..."
+          placeholder="Search by name or SKU..."
           value={search}
           onChange={(event) =>
             setSearch(event.target.value)
@@ -189,51 +421,47 @@ function Products() {
         />
 
         <select
-          value={category}
+          value={categoryFilter}
           onChange={(event) =>
-            setCategory(event.target.value)
+            setCategoryFilter(
+              event.target.value
+            )
           }
         >
-          {categories.map((item) => (
+          <option value="ALL">
+            All Categories
+          </option>
+
+          {categories.map((category) => (
             <option
-              key={item}
-              value={item}
+              key={category.id}
+              value={category.id}
             >
-              {item === "ALL"
-                ? "All Categories"
-                : item}
+              {category.name}
             </option>
           ))}
         </select>
 
-        <select
-          value={location}
-          onChange={(event) =>
-            setLocation(event.target.value)
-          }
+        <button
+          type="button"
+          className="secondary-btn"
+          onClick={loadProductsOnly}
         >
-          {locations.map((item) => (
-            <option
-              key={item}
-              value={item}
-            >
-              {item === "ALL"
-                ? "All Locations"
-                : item}
-            </option>
-          ))}
-        </select>
+          Refresh
+        </button>
 
       </div>
 
+      {/* ================= TABLE ================= */}
+
       {filteredProducts.length === 0 ? (
-        <div className="empty-state">
+        <div className="products-state">
           No products found.
         </div>
       ) : (
-        <div className="table-container">
+        <div className="products-table-wrapper">
 
-          <table>
+          <table className="products-table">
 
             <thead>
               <tr>
@@ -241,9 +469,8 @@ function Products() {
                 <th>SKU</th>
                 <th>Category</th>
                 <th>Unit</th>
-                <th>Stock</th>
-                <th>Location</th>
-                <th>Reorder Level</th>
+                <th>Description</th>
+                <th>Actions</th>
               </tr>
             </thead>
 
@@ -252,42 +479,61 @@ function Products() {
               {filteredProducts.map(
                 (product) => (
 
-                  <tr
-                    key={product.id}
-                  >
-                    <td>
+                  <tr key={product.id}>
+
+                    <td className="product-name">
                       {product.name}
                     </td>
 
                     <td>
-                      {product.sku ??
-                        product.code}
+                      {product.sku}
                     </td>
 
                     <td>
-                      {product.category}
-                    </td>
-
-                    <td>
-                      {product.unitOfMeasure ??
-                        product.unit ??
+                      {product.category?.name ??
                         "-"}
                     </td>
 
                     <td>
-                      {product.stock ?? 0}
-                    </td>
-
-                    <td>
-                      {product.location ||
-                        product.locationName ||
+                      {product.unitOfMeasure?.name ??
                         "-"}
                     </td>
 
                     <td>
-                      {product.reorderLevel ??
+                      {product.description ||
                         "-"}
                     </td>
+
+                    <td>
+                      <div className="product-actions">
+
+                        <button
+                          type="button"
+                          className="secondary-btn"
+                          onClick={() =>
+                            openEditModal(
+                              product
+                            )
+                          }
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          type="button"
+                          className="danger-btn"
+                          onClick={() =>
+                            handleDelete(
+                              product
+                            )
+                          }
+                        >
+                          Delete
+                        </button>
+
+                      </div>
+                    </td>
+
                   </tr>
 
                 )
@@ -296,6 +542,201 @@ function Products() {
             </tbody>
 
           </table>
+
+        </div>
+      )}
+
+      {/* ================= PRODUCT MODAL ================= */}
+
+      {isModalOpen && (
+        <div className="modal-backdrop">
+
+          <div className="product-modal">
+
+            <div className="modal-header">
+
+              <div>
+                <h2>
+                  {editingProduct
+                    ? "Edit Product"
+                    : "Create Product"}
+                </h2>
+
+                <p>
+                  Enter the product information.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="modal-close"
+                onClick={closeModal}
+                disabled={saving}
+              >
+                ×
+              </button>
+
+            </div>
+
+            <form
+              onSubmit={handleSubmit}
+              className="product-form"
+            >
+
+              <div className="form-group">
+
+                <label>
+                  Product Name
+                </label>
+
+                <input
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  placeholder="e.g. Steel Rods"
+                  disabled={saving}
+                />
+
+              </div>
+
+              <div className="form-group">
+
+                <label>
+                  SKU
+                </label>
+
+                <input
+                  name="sku"
+                  value={form.sku}
+                  onChange={handleChange}
+                  placeholder="e.g. STEEL-ROD-01"
+                  disabled={
+                    saving ||
+                    Boolean(editingProduct)
+                  }
+                />
+
+                {editingProduct && (
+                  <small>
+                    SKU cannot be changed during
+                    product update according to
+                    the current backend contract.
+                  </small>
+                )}
+
+              </div>
+
+              <div className="form-row">
+
+                <div className="form-group">
+
+                  <label>
+                    Category
+                  </label>
+
+                  <select
+                    name="categoryId"
+                    value={form.categoryId}
+                    onChange={handleChange}
+                    disabled={saving}
+                  >
+                    <option value="">
+                      Select category
+                    </option>
+
+                    {categories.map(
+                      (category) => (
+                        <option
+                          key={category.id}
+                          value={category.id}
+                        >
+                          {category.name}
+                        </option>
+                      )
+                    )}
+
+                  </select>
+
+                </div>
+
+                <div className="form-group">
+
+                  <label>
+                    Unit of Measure
+                  </label>
+
+                  <select
+                    name="unitOfMeasureId"
+                    value={
+                      form.unitOfMeasureId
+                    }
+                    onChange={handleChange}
+                    disabled={saving}
+                  >
+                    <option value="">
+                      Select unit
+                    </option>
+
+                    {uoms.map((uom) => (
+                      <option
+                        key={uom.id}
+                        value={uom.id}
+                      >
+                        {uom.name} ({uom.code})
+                      </option>
+                    ))}
+
+                  </select>
+
+                </div>
+
+              </div>
+
+              <div className="form-group">
+
+                <label>
+                  Description
+                </label>
+
+                <textarea
+                  name="description"
+                  value={form.description}
+                  onChange={handleChange}
+                  placeholder="Product description..."
+                  rows="4"
+                  disabled={saving}
+                />
+
+              </div>
+
+              <div className="modal-actions">
+
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={closeModal}
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="primary-btn"
+                  disabled={saving}
+                >
+                  {saving
+                    ? "Saving..."
+                    : editingProduct
+                    ? "Update Product"
+                    : "Create Product"}
+                </button>
+
+              </div>
+
+            </form>
+
+          </div>
 
         </div>
       )}
