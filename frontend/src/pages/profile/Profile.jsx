@@ -1,22 +1,25 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+function getSavedUser() {
+  const savedUser = localStorage.getItem("user");
+
+  if (!savedUser) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(savedUser);
+  } catch (error) {
+    console.error("Failed to load user:", error);
+    return null;
+  }
+}
 
 function Profile() {
   const navigate = useNavigate();
 
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (error) {
-        console.error("Failed to load user:", error);
-      }
-    }
-  }, []);
+  const [user] = useState(getSavedUser);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -27,7 +30,6 @@ function Profile() {
 
   return (
     <div className="profile-page">
-
       <div className="profile-header">
         <div>
           <h1>My Profile</h1>
@@ -46,7 +48,6 @@ function Profile() {
       </div>
 
       <div className="profile-card">
-
         <div className="profile-avatar">
           {user?.name
             ?.charAt(0)
@@ -54,7 +55,6 @@ function Profile() {
         </div>
 
         <div className="profile-info">
-
           <div className="profile-field">
             <span>Name</span>
 
@@ -78,10 +78,8 @@ function Profile() {
               {user?.role || "Not available"}
             </strong>
           </div>
-
         </div>
       </div>
-
     </div>
   );
 }

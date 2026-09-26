@@ -1,19 +1,22 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+
+function getSavedUser() {
+  const savedUser = localStorage.getItem("user");
+
+  if (!savedUser) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(savedUser);
+  } catch (error) {
+    console.error("Failed to load user:", error);
+    return null;
+  }
+}
 
 function Navbar() {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const savedUser = localStorage.getItem("user");
-
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (error) {
-        console.error("Failed to load user:", error);
-      }
-    }
-  }, []);
+  const [user] = useState(getSavedUser);
 
   return (
     <header className="navbar">

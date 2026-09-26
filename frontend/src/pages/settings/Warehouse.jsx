@@ -1,30 +1,88 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import warehouseService from "../../services/warehouseService";
+
+const demoWarehouses = [
+  {
+    id: 1,
+    name: "Main Warehouse",
+    code: "WH-MAIN",
+    location: "Pune",
+    status: "Active",
+  },
+  {
+    id: 2,
+    name: "Secondary Warehouse",
+    code: "WH-SEC",
+    location: "Mumbai",
+    status: "Active",
+  },
+];
 
 function Warehouse() {
-  const [warehouses, setWarehouses] = useState([
-    {
-      id: 1,
-      name: "Main Warehouse",
-      code: "WH-MAIN",
-      location: "Pune",
-      status: "Active",
-    },
-    {
-      id: 2,
-      name: "Secondary Warehouse",
-      code: "WH-SEC",
-      location: "Mumbai",
-      status: "Active",
-    },
-  ]);
-
+  const [warehouses, setWarehouses] = useState(demoWarehouses);
   const [showModal, setShowModal] = useState(false);
-
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     code: "",
     location: "",
   });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadInitialWarehouses = async () => {
+      setLoading(true);
+
+      try {
+        const response = await warehouseService.getAll();
+
+        console.log("Warehouse response:", response.data);
+
+        const data = response.data?.data || response.data;
+
+        if (!cancelled && Array.isArray(data)) {
+          setWarehouses(data);
+        }
+      } catch {
+        console.log(
+          "Backend not available. Using demo warehouse data."
+        );
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadInitialWarehouses();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const loadWarehouses = async () => {
+    setLoading(true);
+
+    try {
+      const response = await warehouseService.getAll();
+
+      console.log("Warehouse response:", response.data);
+
+      const data = response.data?.data || response.data;
+
+      if (Array.isArray(data)) {
+        setWarehouses(data);
+      }
+    } catch {
+      console.log(
+        "Backend not available. Using existing warehouse data."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -33,21 +91,38 @@ function Warehouse() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const newWarehouse = {
-      id: Date.now(),
       name: formData.name,
       code: formData.code,
       location: formData.location,
-      status: "Active",
     };
 
-    setWarehouses([
-      ...warehouses,
-      newWarehouse,
-    ]);
+    try {
+      const response = await warehouseService.create(newWarehouse);
+
+      console.log(
+        "Create warehouse response:",
+        response.data
+      );
+
+      await loadWarehouses();
+    } catch {
+      console.log(
+        "Backend unavailable. Adding warehouse locally."
+      );
+
+      setWarehouses((currentWarehouses) => [
+        ...currentWarehouses,
+        {
+          id: Date.now(),
+          ...newWarehouse,
+          status: "Active",
+        },
+      ]);
+    }
 
     setFormData({
       name: "",
@@ -58,9 +133,16 @@ function Warehouse() {
     setShowModal(false);
   };
 
+  const activeWarehouses = warehouses.filter(
+    (warehouse) => warehouse.status === "Active"
+  ).length;
+
+  const locations = new Set(
+    warehouses.map((warehouse) => warehouse.location)
+  ).size;
+
   return (
     <div className="warehouse-page">
-
       <div className="page-header">
         <div>
           <h1>Warehouse</h1>
@@ -79,42 +161,32 @@ function Warehouse() {
       </div>
 
       <div className="warehouse-stats">
-
         <div className="warehouse-stat-card">
           <span>Total Warehouses</span>
-          <strong>{warehouses.length}</strong>
+
+          <strong>
+            {warehouses.length}
+          </strong>
         </div>
 
         <div className="warehouse-stat-card">
           <span>Active Warehouses</span>
+
           <strong>
-            {
-              warehouses.filter(
-                (warehouse) =>
-                  warehouse.status === "Active"
-              ).length
-            }
+            {activeWarehouses}
           </strong>
         </div>
 
         <div className="warehouse-stat-card">
           <span>Locations</span>
+
           <strong>
-            {
-              new Set(
-                warehouses.map(
-                  (warehouse) =>
-                    warehouse.location
-                )
-              ).size
-            }
+            {locations}
           </strong>
         </div>
-
       </div>
 
       <div className="warehouse-card">
-
         <div className="section-header">
           <div>
             <h2>All Warehouses</h2>
@@ -125,60 +197,73 @@ function Warehouse() {
           </div>
         </div>
 
-        <div className="table-container">
+        {loading ? (
+          <div className="ui-loader-container">
+            <div className="ui-loader"></div>
 
-          <table className="data-table">
-
-            <thead>
-              <tr>
-                <th>Warehouse</th>
-                <th>Code</th>
-                <th>Location</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-
-            <tbody>
-
-              {warehouses.map((warehouse) => (
-                <tr key={warehouse.id}>
-
-                  <td>
-                    <strong>
-                      {warehouse.name}
-                    </strong>
-                  </td>
-
-                  <td>
-                    {warehouse.code}
-                  </td>
-
-                  <td>
-                    {warehouse.location}
-                  </td>
-
-                  <td>
-                    <span className="status-badge status-completed">
-                      {warehouse.status}
-                    </span>
-                  </td>
-
+            <span>
+              Loading warehouses...
+            </span>
+          </div>
+        ) : (
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Warehouse</th>
+                  <th>Code</th>
+                  <th>Location</th>
+                  <th>Status</th>
                 </tr>
-              ))}
+              </thead>
 
-            </tbody>
+              <tbody>
+                {warehouses.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan="4"
+                      style={{
+                        textAlign: "center",
+                        padding: "30px",
+                      }}
+                    >
+                      No warehouses found.
+                    </td>
+                  </tr>
+                ) : (
+                  warehouses.map((warehouse) => (
+                    <tr key={warehouse.id}>
+                      <td>
+                        <strong>
+                          {warehouse.name}
+                        </strong>
+                      </td>
 
-          </table>
+                      <td>
+                        {warehouse.code}
+                      </td>
 
-        </div>
+                      <td>
+                        {warehouse.location}
+                      </td>
 
+                      <td>
+                        <span className="status-badge status-completed">
+                          {warehouse.status || "Active"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {showModal && (
         <div className="modal-overlay">
-
           <div className="modal">
-
             <div className="modal-header">
               <div>
                 <h2>Add Warehouse</h2>
@@ -190,7 +275,9 @@ function Warehouse() {
 
               <button
                 className="modal-close"
-                onClick={() => setShowModal(false)}
+                onClick={() =>
+                  setShowModal(false)
+                }
               >
                 ×
               </button>
@@ -200,9 +287,7 @@ function Warehouse() {
               className="warehouse-form"
               onSubmit={handleSubmit}
             >
-
               <div className="form-group">
-
                 <label>
                   Warehouse Name
                 </label>
@@ -215,11 +300,9 @@ function Warehouse() {
                   onChange={handleChange}
                   required
                 />
-
               </div>
 
               <div className="form-group">
-
                 <label>
                   Warehouse Code
                 </label>
@@ -232,11 +315,9 @@ function Warehouse() {
                   onChange={handleChange}
                   required
                 />
-
               </div>
 
               <div className="form-group">
-
                 <label>
                   Location
                 </label>
@@ -249,15 +330,15 @@ function Warehouse() {
                   onChange={handleChange}
                   required
                 />
-
               </div>
 
               <div className="modal-actions">
-
                 <button
                   type="button"
                   className="secondary-button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() =>
+                    setShowModal(false)
+                  }
                 >
                   Cancel
                 </button>
@@ -268,16 +349,11 @@ function Warehouse() {
                 >
                   Add Warehouse
                 </button>
-
               </div>
-
             </form>
-
           </div>
-
         </div>
       )}
-
     </div>
   );
 }
