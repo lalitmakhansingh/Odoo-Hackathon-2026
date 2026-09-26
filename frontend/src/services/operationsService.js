@@ -23,18 +23,61 @@ export const productService = {
 
 
 /* =========================
+   CATEGORIES
+========================= */
+
+export const categoryService = {
+  getAll: () =>
+    api.get("/categories"),
+
+  create: (data) =>
+    api.post("/categories", data),
+};
+
+
+/* =========================
+   UNITS OF MEASURE
+========================= */
+
+export const uomService = {
+  getAll: () =>
+    api.get("/uom"),
+
+  create: (data) =>
+    api.post("/uom", data),
+};
+
+
+/* =========================
+   REORDER RULES
+========================= */
+
+export const reorderRuleService = {
+  getAll: () =>
+    api.get("/reorder-rules"),
+
+  create: (data) =>
+    api.post("/reorder-rules", data),
+};
+
+
+/* =========================
    STOCK
 ========================= */
 
 export const stockService = {
-  getAll: () =>
-    api.get("/stock"),
+  getAll: (params = {}) =>
+    api.get("/stock", { params }),
 
   getByProduct: (productId) =>
-    api.get(`/stock/product/${productId}`),
+    api.get("/stock", {
+      params: { productId },
+    }),
 
   getByLocation: (locationId) =>
-    api.get(`/stock/location/${locationId}`),
+    api.get("/stock", {
+      params: { locationId },
+    }),
 };
 
 
@@ -77,7 +120,7 @@ export const deliveryService = {
 
 
 /* =========================
-   INTERNAL TRANSFERS
+   TRANSFERS
 ========================= */
 
 export const transferService = {
@@ -93,7 +136,7 @@ export const transferService = {
 
 
 /* =========================
-   INVENTORY ADJUSTMENTS
+   ADJUSTMENTS
 ========================= */
 
 export const adjustmentService = {
@@ -113,6 +156,6 @@ export const adjustmentService = {
 ========================= */
 
 export const moveHistoryService = {
-  getAll: () =>
-    api.get("/stock-moves"),
+  getAll: (params = {}) =>
+    api.get("/stock-moves", { params }),
 };
