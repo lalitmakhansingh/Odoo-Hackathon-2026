@@ -461,10 +461,13 @@ export const mockTransferService = {
       id: `TRF-${String(
         transfers.length + 1
       ).padStart(3, "0")}`,
+
       date: new Date()
         .toISOString()
         .split("T")[0],
+
       status: "DRAFT",
+
       ...data,
     };
 
@@ -477,14 +480,108 @@ export const mockTransferService = {
   },
 
   validate: async (id) => {
-    transfers = transfers.map((item) =>
-      item.id === id
-        ? {
-            ...item,
-            status: "DONE",
-          }
-        : item
-    );
+    const transfer =
+      transfers.find(
+        (item) => item.id === id
+      );
+
+    if (!transfer) {
+      throw new Error(
+        "Transfer not found"
+      );
+    }
+
+    const quantity =
+      Number(transfer.quantity);
+
+    // Find source stock
+    const sourceIndex =
+      mockStock.findIndex(
+        (item) =>
+          item.productId ===
+            Number(transfer.productId) &&
+          item.locationName ===
+            transfer.sourceLocation
+      );
+
+    if (sourceIndex === -1) {
+      throw new Error(
+        "Source stock location not found"
+      );
+    }
+
+    const sourceQuantity =
+      Number(
+        mockStock[sourceIndex].quantity
+      );
+
+    if (quantity > sourceQuantity) {
+      throw new Error(
+        "Insufficient source stock"
+      );
+    }
+
+    // Reduce source
+    mockStock[sourceIndex].quantity =
+      sourceQuantity - quantity;
+
+    // Find destination stock
+    const destinationIndex =
+      mockStock.findIndex(
+        (item) =>
+          item.productId ===
+            Number(transfer.productId) &&
+          item.locationName ===
+            transfer.destinationLocation
+      );
+
+    if (destinationIndex >= 0) {
+      // Destination already exists
+      mockStock[destinationIndex].quantity +=
+        quantity;
+    } else {
+      // Create destination stock record
+      mockStock.push({
+        id: Date.now(),
+        productId:
+          Number(transfer.productId),
+        warehouseId: 1,
+        warehouseName:
+          "Main Warehouse",
+        locationId: Date.now(),
+        locationName:
+          transfer.destinationLocation,
+        quantity,
+      });
+    }
+
+    // Mark transfer done
+    transfers =
+      transfers.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              status: "DONE",
+            }
+          : item
+      );
+
+    // Add ledger record
+    moveHistory.push({
+      id: Date.now(),
+      date: new Date().toISOString(),
+      product:
+        transfer.productName,
+      source:
+        transfer.sourceLocation,
+      destination:
+        transfer.destinationLocation,
+      quantity,
+      type: "TRANSFER",
+      reference: transfer.id,
+      user: "Lalit",
+      status: "DONE",
+    });
 
     return response(
       null,

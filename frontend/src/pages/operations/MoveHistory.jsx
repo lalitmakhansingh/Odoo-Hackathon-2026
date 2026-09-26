@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   moveHistoryService,
 } from "../../services/operationsService";
+
+import "./operations.css";
 
 function MoveHistory() {
   const [moves, setMoves] =
@@ -11,15 +13,11 @@ function MoveHistory() {
   const [loading, setLoading] =
     useState(true);
 
-  const [product, setProduct] =
+  const [search, setSearch] =
     useState("");
 
-  const [movementType, setMovementType] =
+  const [typeFilter, setTypeFilter] =
     useState("ALL");
-
-  useEffect(() => {
-    loadMoves();
-  }, []);
 
   async function loadMoves() {
     try {
@@ -28,93 +26,73 @@ function MoveHistory() {
       const response =
         await moveHistoryService.getAll();
 
-      const data =
-        response?.data ?? response;
-
       setMoves(
-        Array.isArray(data)
-          ? data
-          : data?.content ?? []
+        response?.data?.data || []
       );
-
-    } catch (err) {
-      console.error(err);
     } finally {
       setLoading(false);
     }
   }
 
+  useEffect(() => {
+    loadMoves();
+  }, []);
+
   const filteredMoves =
-    moves.filter((move) => {
+    useMemo(() => {
+      const query =
+        search.trim().toLowerCase();
 
-      const moveProduct =
-        move.product?.name ||
-        move.productName ||
-        "";
+      return moves.filter((move) => {
 
-      const type =
-        move.movementType ||
-        move.type ||
-        "";
+        const matchesSearch =
+          move.product
+            .toLowerCase()
+            .includes(query) ||
+          move.reference
+            .toLowerCase()
+            .includes(query);
 
-      const matchesProduct =
-        moveProduct
-          .toLowerCase()
-          .includes(
-            product.toLowerCase()
-          );
+        const matchesType =
+          typeFilter === "ALL" ||
+          move.type === typeFilter;
 
-      const matchesType =
-        movementType === "ALL" ||
-        type === movementType;
-
-      return (
-        matchesProduct &&
-        matchesType
-      );
-    });
-
-  if (loading) {
-    return (
-      <section className="page">
-        <h1>Move History</h1>
-        <p>Loading stock ledger...</p>
-      </section>
-    );
-  }
+        return (
+          matchesSearch &&
+          matchesType
+        );
+      });
+    }, [moves, search, typeFilter]);
 
   return (
-    <section className="page">
+    <section className="operations-page">
 
-      <div className="page-header">
+      <div className="operation-header">
 
         <div>
           <h1>Move History</h1>
 
           <p>
-            Complete stock movement ledger.
+            Complete inventory movement ledger.
           </p>
         </div>
 
       </div>
 
-      <div className="filters">
+      <div className="operation-filters">
 
         <input
-          type="text"
-          placeholder="Search product..."
-          value={product}
-          onChange={(event) =>
-            setProduct(event.target.value)
+          placeholder="Search product or reference..."
+          value={search}
+          onChange={(e) =>
+            setSearch(e.target.value)
           }
         />
 
         <select
-          value={movementType}
-          onChange={(event) =>
-            setMovementType(
-              event.target.value
-            )
+          value={typeFilter}
+          onChange={(e) =>
+            setTypeFilter(e.target.value)
           }
         >
           <option value="ALL">
@@ -138,87 +116,105 @@ function MoveHistory() {
           </option>
         </select>
 
-      </div>
-
-      <div className="table-container">
-
-        <table>
-
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Product</th>
-              <th>Source</th>
-              <th>Destination</th>
-              <th>Quantity</th>
-              <th>Movement Type</th>
-              <th>Reference</th>
-              <th>User</th>
-            </tr>
-          </thead>
-
-          <tbody>
-
-            {filteredMoves.map(
-              (move) => (
-
-                <tr key={move.id}>
-
-                  <td>
-                    {move.createdAt ||
-                      move.date ||
-                      "-"}
-                  </td>
-
-                  <td>
-                    {move.product?.name ||
-                      move.productName ||
-                      "-"}
-                  </td>
-
-                  <td>
-                    {move.sourceLocation?.name ||
-                      move.sourceLocationName ||
-                      "-"}
-                  </td>
-
-                  <td>
-                    {move.destinationLocation?.name ||
-                      move.destinationLocationName ||
-                      "-"}
-                  </td>
-
-                  <td>
-                    {move.quantity ?? "-"}
-                  </td>
-
-                  <td>
-                    {move.movementType ||
-                      move.type ||
-                      "-"}
-                  </td>
-
-                  <td>
-                    {move.reference ||
-                      "-"}
-                  </td>
-
-                  <td>
-                    {move.user?.name ||
-                      move.username ||
-                      "-"}
-                  </td>
-
-                </tr>
-
-              )
-            )}
-
-          </tbody>
-
-        </table>
+        <button
+          className="secondary-btn"
+          onClick={loadMoves}
+        >
+          Refresh
+        </button>
 
       </div>
+
+      {loading ? (
+        <div className="state-box">
+          Loading move history...
+        </div>
+      ) : (
+        <div className="operation-table-wrapper">
+
+          <table className="operation-table">
+
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Product</th>
+                <th>Source</th>
+                <th>Destination</th>
+                <th>Quantity</th>
+                <th>Movement</th>
+                <th>Reference</th>
+                <th>User</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              {filteredMoves.map(
+                (move) => (
+
+                  <tr key={move.id}>
+
+                    <td>
+                      {move.date}
+                    </td>
+
+                    <td>
+                      {move.product}
+                    </td>
+
+                    <td>
+                      {move.source}
+                    </td>
+
+                    <td>
+                      {move.destination}
+                    </td>
+
+                    <td>
+                      {move.quantity}
+                    </td>
+
+                    <td>
+                      <span
+                        className={`type-badge ${move.type.toLowerCase()}`}
+                      >
+                        {move.type}
+                      </span>
+                    </td>
+
+                    <td>
+                      {move.reference}
+                    </td>
+
+                    <td>
+                      {move.user}
+                    </td>
+
+                    <td>
+                      <span
+                        className={`status-badge ${move.status.toLowerCase()}`}
+                      >
+                        {move.status}
+                      </span>
+                    </td>
+
+                  </tr>
+                )
+              )}
+
+            </tbody>
+
+          </table>
+
+          {filteredMoves.length === 0 && (
+            <div className="state-box">
+              No movements found.
+            </div>
+          )}
+
+        </div>
+      )}
 
     </section>
   );

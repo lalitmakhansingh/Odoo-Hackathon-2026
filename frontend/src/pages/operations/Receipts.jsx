@@ -4,6 +4,8 @@ import {
   receiptService,
 } from "../../services/operationsService";
 
+import "./operations.css";
+
 function Receipts() {
   const [receipts, setReceipts] =
     useState([]);
@@ -11,12 +13,17 @@ function Receipts() {
   const [loading, setLoading] =
     useState(true);
 
-  const [error, setError] =
+  const [formOpen, setFormOpen] =
+    useState(false);
+
+  const [supplier, setSupplier] =
     useState("");
 
-  useEffect(() => {
-    loadReceipts();
-  }, []);
+  const [product, setProduct] =
+    useState("");
+
+  const [quantity, setQuantity] =
+    useState("");
 
   async function loadReceipts() {
     try {
@@ -25,146 +32,237 @@ function Receipts() {
       const response =
         await receiptService.getAll();
 
-      const data =
-        response?.data ?? response;
-
       setReceipts(
-        Array.isArray(data)
-          ? data
-          : data?.content ?? []
-      );
-
-    } catch (err) {
-      console.error(err);
-
-      setError(
-        "Unable to load receipts."
+        response?.data?.data || []
       );
     } finally {
       setLoading(false);
     }
   }
 
-  async function validateReceipt(id) {
-    try {
-      await receiptService.validate(id);
+  useEffect(() => {
+    loadReceipts();
+  }, []);
 
-      await loadReceipts();
+  async function createReceipt(
+    event
+  ) {
+    event.preventDefault();
 
-    } catch (err) {
-      console.error(err);
-
-      alert(
-        "Receipt validation failed."
-      );
+    if (
+      !supplier.trim() ||
+      !product.trim() ||
+      Number(quantity) <= 0
+    ) {
+      alert("Please enter valid receipt details.");
+      return;
     }
+
+    await receiptService.create({
+      supplier,
+      items: [
+        {
+          productName: product,
+          quantity: Number(quantity),
+        },
+      ],
+    });
+
+    setSupplier("");
+    setProduct("");
+    setQuantity("");
+    setFormOpen(false);
+
+    await loadReceipts();
   }
 
-  if (loading) {
-    return (
-      <section className="page">
-        <h1>Receipts</h1>
-        <p>Loading receipts...</p>
-      </section>
-    );
+  async function validateReceipt(id) {
+    await receiptService.validate(id);
+    await loadReceipts();
   }
 
   return (
-    <section className="page">
+    <section className="operations-page">
 
-      <div className="page-header">
-
+      <div className="operation-header">
         <div>
           <h1>Receipts</h1>
-
           <p>
-            Manage incoming goods from suppliers.
+            Manage incoming stock from suppliers.
           </p>
         </div>
 
-        <button className="primary-btn">
+        <button
+          className="primary-btn"
+          onClick={() => setFormOpen(true)}
+        >
           + Create Receipt
         </button>
-
       </div>
 
-      {error && (
-        <div className="error-state">
-          {error}
+      {loading ? (
+        <div className="state-box">
+          Loading receipts...
+        </div>
+      ) : (
+        <div className="operation-table-wrapper">
+
+          <table className="operation-table">
+            <thead>
+              <tr>
+                <th>Receipt</th>
+                <th>Supplier</th>
+                <th>Items</th>
+                <th>Date</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {receipts.map(
+                (receipt) => (
+                  <tr key={receipt.id}>
+
+                    <td>
+                      {receipt.id}
+                    </td>
+
+                    <td>
+                      {receipt.supplier}
+                    </td>
+
+                    <td>
+                      {receipt.items?.length || 0}
+                    </td>
+
+                    <td>
+                      {receipt.date}
+                    </td>
+
+                    <td>
+                      <span
+                        className={`status-badge ${receipt.status.toLowerCase()}`}
+                      >
+                        {receipt.status}
+                      </span>
+                    </td>
+
+                    <td>
+                      {receipt.status !==
+                        "DONE" && (
+                        <button
+                          className="secondary-btn"
+                          onClick={() =>
+                            validateReceipt(
+                              receipt.id
+                            )
+                          }
+                        >
+                          Validate
+                        </button>
+                      )}
+                    </td>
+
+                  </tr>
+                )
+              )}
+            </tbody>
+          </table>
+
         </div>
       )}
 
-      <div className="table-container">
+      {formOpen && (
+        <div className="modal-backdrop">
 
-        <table>
+          <div className="operation-modal">
 
-          <thead>
-            <tr>
-              <th>Receipt</th>
-              <th>Supplier</th>
-              <th>Date</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
+            <div className="modal-header">
+              <h2>Create Receipt</h2>
 
-          <tbody>
+              <button
+                className="modal-close"
+                onClick={() =>
+                  setFormOpen(false)
+                }
+              >
+                ×
+              </button>
+            </div>
 
-            {receipts.map((receipt) => (
+            <form
+              className="operation-form"
+              onSubmit={createReceipt}
+            >
 
-              <tr key={receipt.id}>
+              <label>
+                Supplier
+                <input
+                  value={supplier}
+                  onChange={(e) =>
+                    setSupplier(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Supplier name"
+                />
+              </label>
 
-                <td>
-                  {receipt.reference ||
-                    receipt.code ||
-                    receipt.id}
-                </td>
+              <label>
+                Product
+                <input
+                  value={product}
+                  onChange={(e) =>
+                    setProduct(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Product name"
+                />
+              </label>
 
-                <td>
-                  {receipt.supplier?.name ||
-                    receipt.supplierName ||
-                    "-"}
-                </td>
+              <label>
+                Quantity
+                <input
+                  type="number"
+                  min="1"
+                  value={quantity}
+                  onChange={(e) =>
+                    setQuantity(
+                      e.target.value
+                    )
+                  }
+                />
+              </label>
 
-                <td>
-                  {receipt.date ||
-                    receipt.createdAt ||
-                    "-"}
-                </td>
+              <div className="modal-actions">
 
-                <td>
-                  {receipt.status}
-                </td>
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  onClick={() =>
+                    setFormOpen(false)
+                  }
+                >
+                  Cancel
+                </button>
 
-                <td>
+                <button
+                  type="submit"
+                  className="primary-btn"
+                >
+                  Save Receipt
+                </button>
 
-                  {receipt.status !==
-                    "DONE" && (
+              </div>
 
-                    <button
-                      className="secondary-btn"
-                      onClick={() =>
-                        validateReceipt(
-                          receipt.id
-                        )
-                      }
-                    >
-                      Validate
-                    </button>
+            </form>
 
-                  )}
+          </div>
 
-                </td>
-
-              </tr>
-
-            ))}
-
-          </tbody>
-
-        </table>
-
-      </div>
+        </div>
+      )}
 
     </section>
   );

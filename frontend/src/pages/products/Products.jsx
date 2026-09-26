@@ -42,10 +42,9 @@ function Products() {
     useState(EMPTY_FORM);
 
   useEffect(() => {
-    loadInitialData();
-  }, []);
+  let active = true;
 
-  async function loadInitialData() {
+  async function initialize() {
     try {
       setLoading(true);
       setError("");
@@ -60,27 +59,33 @@ function Products() {
         uomService.getAll(),
       ]);
 
-      setProducts(
-        extractList(productsResponse)
-      );
+      if (!active) return;
 
-      setCategories(
-        extractList(categoriesResponse)
-      );
-
-      setUoms(
-        extractList(uomResponse)
-      );
+      setProducts(extractList(productsResponse));
+      setCategories(extractList(categoriesResponse));
+      setUoms(extractList(uomResponse));
     } catch (err) {
-      console.error(err);
+      if (!active) return;
 
+      console.error(err);
       setError(
         "Unable to load product information."
       );
     } finally {
-      setLoading(false);
+      if (active) {
+        setLoading(false);
+      }
     }
   }
+
+  initialize();
+
+  return () => {
+    active = false;
+  };
+}, []);
+
+
 
   /*
    * Narender's common response format:
@@ -115,16 +120,6 @@ function Products() {
     return [];
   }
 
-  function extractObject(response) {
-    const body = response?.data;
-
-    if (body?.data) {
-      return body.data;
-    }
-
-    return body;
-  }
-
   const filteredProducts = useMemo(() => {
     const query = search
       .trim()
@@ -137,8 +132,6 @@ function Products() {
       const sku =
         String(product.sku ?? "");
 
-      const category =
-        product.category?.name ?? "";
 
       const matchesSearch =
         name.toLowerCase().includes(query) ||
